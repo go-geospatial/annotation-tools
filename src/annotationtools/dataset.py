@@ -16,6 +16,7 @@
 from typing import Dict, List
 from enum import Enum
 
+import pandas as pd
 from shapely.geometry.base import BaseGeometry
 
 class InputType(Enum):
@@ -122,7 +123,7 @@ class Annotation:
         '''
         from datetime import datetime
 
-        self.frame: str = frame
+        self.frame: Frame = frame
 
         self.__id: str = id
         if self.__id is None:
@@ -239,4 +240,29 @@ class Dataset:
         '''
         Get annotations as a pandas dataframe
         '''
-        pass
+        data = []
+        for annotation in self:
+            my_annotation = {
+                'dataset_name': self.name,
+                'frame': annotation.frame.name,
+                'frame_idx': annotation.frame.id,
+                'frame_height': annotation.frame.height,
+                'frame_width': annotation.frame.width,
+                'label': annotation.label,
+                'geom': annotation.geom.wkt,
+                'rotation': annotation.rotation,
+                'occluded': annotation.occluded,
+                'z_order': annotation.z_order,
+                'annotation_id': annotation.id,
+                'source': annotation.source,
+                'group': annotation.group,
+                'created_on': annotation.created_on,
+                'created_by': annotation.created_by,
+            }
+
+            # add attributes
+            my_annotation.update(annotation.attributes)
+
+            data.append(my_annotation)
+
+        return pd.DataFrame(data)

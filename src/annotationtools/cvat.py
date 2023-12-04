@@ -13,11 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import copy
+from io import StringIO
 import logging
 from typing import IO, Union
 from xml.etree.ElementTree import Element
+import xml.etree.ElementTree as ET
 
-from .dataset import Dataset
+from dateutil.parser import parse as date_parse
+from shapely.geometry import box, Polygon, LineString, Point, MultiPoint
+import shapely
+
+from .dataset import Annotation, Frame, Dataset, User, Label, LabelType, Attribute, InputType
 
 def _get_text_val(tag: Element, path: str) -> str:
     sub = tag.find(path)
@@ -29,9 +36,6 @@ def _get_text_val(tag: Element, path: str) -> str:
 
 
 def _parse_meta(d: Dataset, root: Element):
-    from dateutil.parser import parse as date_parse
-    from .dataset import User
-
     job = root.find('./meta/job')
     if job is not None:
         d.id = _get_text_val(job, './id')
@@ -60,8 +64,6 @@ def _parse_meta(d: Dataset, root: Element):
 
 
 def _parse_labels(d: Dataset, root: Element):
-    from .dataset import Label, LabelType, Attribute, InputType
-
     for label in root.findall('./meta/job/labels/label'):
         name = _get_text_val(label, './name')
 
@@ -105,10 +107,6 @@ def _parse_labels(d: Dataset, root: Element):
 
 
 def _parse_annotations(d: Dataset, root: Element):
-    from .dataset import Annotation, Frame
-    from shapely.geometry import box, Polygon, LineString, Point, MultiPoint
-    import shapely
-
     for image in root.findall('./image'):
         frame_name = image.attrib['name']
         frame_id = image.attrib.get('id', '0')
@@ -161,7 +159,7 @@ def _parse_annotations(d: Dataset, root: Element):
                 elif child.tag == 'tag':
                     geom = Point(0,0)
                 else:
-                    logging.warning(f'unknown geometry type {child.tag}')
+                    logging.warning('unknown geometry type %s' % child.tag)
                     continue
 
                 if child.attrib.get('rotation', None) is not None:
@@ -188,8 +186,6 @@ def load(fh: Union[IO[str], str]) -> Dataset:
     '''
     Load a CVAT Images 1.1 XML file from `fh` as a dataset
     '''
-    import xml.etree.ElementTree as ET
-
     d = Dataset()
 
     tree = ET.parse(fh)
@@ -203,17 +199,14 @@ def load(fh: Union[IO[str], str]) -> Dataset:
     return d
 
 
-def loads(input: str) -> Dataset:
+def loads(inp: str) -> Dataset:
     '''
     Load a CVAT Images 1.1 XML file from input string as a dataset
     '''
-    from io import StringIO
-    return load(StringIO(input))
+    return load(StringIO(inp))
 
 
 def _dump_meta(obj: Dataset, root: Element):
-    import xml.etree.ElementTree as ET
-
     meta = ET.SubElement(root, 'meta')
     job = ET.SubElement(meta, 'job')
 
@@ -239,12 +232,6 @@ def _dump_meta(obj: Dataset, root: Element):
 
 
 def _dump_annotations(obj: Dataset, root: Element):
-    from copy import copy
-    import xml.etree.ElementTree as ET
-
-    import shapely
-    from .dataset import LabelType
-
     for frame in obj.frames:
         frame_xml = ET.SubElement(root, 'image')
         frame_xml.attrib['id'] = frame.id
@@ -326,8 +313,6 @@ def dump(obj: Dataset, fh: IO[str]):
     '''
     Save the dataset as a CVAT Images 1.1 XML file
     '''
-    import xml.etree.ElementTree as ET
-
     root = ET.Element('annotations')
     version = ET.SubElement(root, 'version')
     version.text = '1.1'
@@ -344,7 +329,6 @@ def dumps(obj: Dataset) -> str:
     '''
     Dump the dataset to a string
     '''
-    from io import StringIO
     fh = StringIO()
     dump(obj, fh)
     fh.seek(0)

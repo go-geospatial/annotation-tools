@@ -13,4 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+annotationtools is a library for managing labels used for deep learning  models.
+'''
+
 from .dataset import Dataset
