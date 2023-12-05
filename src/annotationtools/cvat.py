@@ -246,7 +246,7 @@ def _dump_annotations(obj: Dataset, root: Element):
         for annotation in frame.annotations:
             label = obj.labels[annotation.label]
             annotation_xml: Element = None
-            if label.type == LabelType.BBOX:
+            if label.type in (LabelType.BBOX, LabelType.RECTANGLE):
                 annotation_xml = ET.SubElement(frame_xml, 'box')
                 geom = copy(annotation.geom)
 

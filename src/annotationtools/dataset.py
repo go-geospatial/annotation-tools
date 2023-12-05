@@ -34,6 +34,7 @@ class LabelType(Enum):
     POLYLINE = 3
     POINTS = 4
     TAG = 5
+    RECTANGLE = 6
 
 
 
