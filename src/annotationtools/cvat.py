@@ -218,7 +218,7 @@ def _dump_meta(obj: Dataset, root: Element):
 
     ET.SubElement(job, 'overlap').text = str(obj.overlap)
 
-    if obj.bugtracker is not None:
+    if obj.bugtracker is not None and obj.bugtracker != '':
         ET.SubElement(job, 'bugtracker').text = obj.bugtracker
 
     if obj.created is not None:
@@ -227,7 +227,7 @@ def _dump_meta(obj: Dataset, root: Element):
     if obj.updated is not None:
         ET.SubElement(job, 'updated').text = obj.updated.isoformat()
 
-    if obj.subset is not None:
+    if obj.subset is not None and obj.subset != '':
         ET.SubElement(job, 'subset').text = obj.subset
 
 
@@ -322,7 +322,7 @@ def dump(obj: Dataset, fh: IO[str]):
 
     fh.write('<?xml version="1.0" encoding="utf-8"?>\n')
     ET.indent(root)
-    fh.write(ET.dump(root))
+    fh.write(ET.tostring(root).decode('utf-8'))
 
 
 def dumps(obj: Dataset) -> str:

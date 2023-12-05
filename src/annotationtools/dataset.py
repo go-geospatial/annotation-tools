@@ -120,7 +120,7 @@ class Annotation:
         '''
         Arguments:
             frame: path to the video or image
-            id: index in lecial order of images
+            id: index in lexical order of images
         '''
         from datetime import datetime
 
