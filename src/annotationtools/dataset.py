@@ -206,12 +206,7 @@ class Dataset:
 
 
     def __getitem__(self, key) -> List[Annotation]:
-        my_annotations: List[Annotation] = []
-        for annotation in self.annotations:
-            if annotation.frame == key:
-                my_annotations.append(annotation)
-
-        return my_annotations
+        return self.annotations[key]
 
 
     def __iter__(self):
