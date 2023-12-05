@@ -32,7 +32,7 @@ def _get_text_val(tag: Element, path: str) -> str:
         if sub.text is not None:
             return sub.text.strip()
 
-    return None
+    return ''
 
 
 def _parse_meta(d: Dataset, root: Element):
