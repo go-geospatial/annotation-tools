@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+Read / save functionality for CVAT Images 1.1 format
+'''
+
 from copy import copy
 from io import StringIO
 import logging
@@ -48,12 +52,12 @@ def _parse_meta(d: Dataset, root: Element):
 
         try:
             d.created = date_parse(_get_text_val(job, './created'))
-        except:
+        except: # pylint: disable=bare-except
             pass
 
         try:
             d.updated = date_parse(_get_text_val(job, './updated'))
-        except:
+        except: # pylint: disable=bare-except
             pass
 
         owner_username = _get_text_val(job, './owner/username')
@@ -71,12 +75,12 @@ def _parse_labels(d: Dataset, root: Element):
         try:
             label_type_str = _get_text_val(label, './type')
             label_type = LabelType[label_type_str.upper()]
-        except Exception as exc:
-            logging.warning(f'encountered exception when detecting label type {exc}')
+        except Exception as exc: # pylint: disable=broad-exception-caught
+            logging.warning('encountered exception when detecting label type %s', exc)
             label_type = None
 
         if label_type is None:
-            logging.warning(f'could not determine valid label type for {name}')
+            logging.warning('could not determine valid label type for %s', name)
 
         l = Label(name, label_type)
         l.color = _get_text_val(label, './color')
@@ -88,11 +92,11 @@ def _parse_labels(d: Dataset, root: Element):
             try:
                 attr_type_str = _get_text_val(attr, './input_type')
                 attr_type = InputType[attr_type_str.upper()]
-            except:
+            except KeyError:
                 attr_type = None
 
             if attr_type is None:
-                logging.warning(f'could not determine valid attribute input type for {name}')
+                logging.warning('could not determine valid attribute input type for %s', name)
 
             values = _get_text_val(attr, './values').split('\n')
 
@@ -104,6 +108,42 @@ def _parse_labels(d: Dataset, root: Element):
             l.attributes[attr_name] = a
 
         d.labels[name] = l
+
+
+def _box_geom(child: Element) -> shapely.Geometry:
+    xtl = float(child.attrib['xtl'])
+    ytl = float(child.attrib['ytl'])
+    xbr = float(child.attrib['xbr'])
+    ybr = float(child.attrib['ybr'])
+    geom = box(xtl, ybr, xbr, ytl)
+
+    return geom
+
+
+def _polygon_geom(child: Element) -> shapely.Geometry:
+    points = child.attrib['points'].split(';')
+    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
+    geom = Polygon(points)
+    return geom
+
+
+def _linestring_geom(child: Element) -> shapely.Geometry:
+    points = child.attrib['points'].split(';')
+    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
+    geom = LineString(points)
+    return geom
+
+
+def _point_geom(child: Element) -> shapely.Geometry:
+    points = child.attrib['points'].split(';')
+    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
+
+    if len(points) == 1:
+        geom = Point(points[0])
+    else:
+        geom = MultiPoint(points)
+
+    return geom
 
 
 def _parse_annotations(d: Dataset, root: Element):
@@ -136,30 +176,17 @@ def _parse_annotations(d: Dataset, root: Element):
 
             try:
                 if child.tag == 'box':
-                    xtl = float(child.attrib['xtl'])
-                    ytl = float(child.attrib['ytl'])
-                    xbr = float(child.attrib['xbr'])
-                    ybr = float(child.attrib['ybr'])
-                    geom = box(xtl, ybr, xbr, ytl)
+                    geom = _box_geom(child)
                 elif child.tag == 'polygon':
-                    points = child.attrib['points'].split(';')
-                    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
-                    geom = Polygon(points)
+                    geom = _polygon_geom(child)
                 elif child.tag == 'polyline':
-                    points = child.attrib['points'].split(';')
-                    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
-                    geom = LineString(points)
+                    geom = _linestring_geom(child)
                 elif child.tag == 'points':
-                    points = child.attrib['points'].split(';')
-                    points = list(map(lambda x: list(map(lambda y: float(y), x.split(','))), points))
-                    if len(points) == 1:
-                        geom = Point(points[0])
-                    else:
-                        geom = MultiPoint(points)
+                    geom = _point_geom(child)
                 elif child.tag == 'tag':
                     geom = Point(0,0)
                 else:
-                    logging.warning('unknown geometry type %s' % child.tag)
+                    logging.warning('unknown geometry type %s', child.tag)
                     continue
 
                 if child.attrib.get('rotation', None) is not None:
@@ -178,8 +205,8 @@ def _parse_annotations(d: Dataset, root: Element):
                     annotation.attributes[attribute.attrib['name']] = attribute.text
 
                 d.annotations.append(annotation)
-            except Exception as exc:
-                logging.warning(f'skipping annotation due to exception: {exc}')
+            except Exception as exc: # pylint: disable=broad-exception-caught
+                logging.warning('skipping annotation due to exception: %s', exc)
 
 
 def load(fh: Union[IO[str], str]) -> Dataset:

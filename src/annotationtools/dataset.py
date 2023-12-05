@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+Container class definitions for annotation-tools library
+'''
+
+from datetime import datetime
+from uuid import uuid4
 from typing import Dict, List
 from enum import Enum
 
@@ -20,6 +26,9 @@ import pandas as pd
 from shapely.geometry.base import BaseGeometry
 
 class InputType(Enum):
+    '''
+    Indicator of type of control to use in user-interface for attributes
+    '''
     SELECT = 1
     CHECKBOX = 2
     RADIO = 3
@@ -29,6 +38,9 @@ class InputType(Enum):
 
 
 class LabelType(Enum):
+    '''
+    Enumerate the geometry types that a label can have
+    '''
     BBOX = 1
     POLYGON = 2
     POLYLINE = 3
@@ -58,7 +70,7 @@ class Label:
     Labels represent the canonical name used to identify an object within an image
     '''
 
-    def __init__(self, name: str, type: LabelType, attributes: Dict[str, Attribute] = {}):
+    def __init__(self, name: str, label_type: LabelType, attributes: Dict[str, Attribute] = None):
         '''
         Create a new `Label` object
 
@@ -68,8 +80,13 @@ class Label:
             attributes: Additional properties that can be applied to the label, e.g. vetted/un-vetted
         '''
         self.name: str = name
-        self.type: str = type
-        self.attributes: Dict[str, Attribute] = attributes
+        self.type: str = label_type
+
+        if attributes is None:
+            self.attributes: Dict[str, Attribute] = {}
+        else:
+            self.attributes: Dict[str, Attribute] = attributes
+
         self.color: str = None
         self.parent: str = None
 
@@ -102,9 +119,9 @@ class Frame:
     Frames are individual images in the dataset and contain annotations
     '''
 
-    def __init__(self, name: str, id: str, width: int = None, height: int = None):
+    def __init__(self, name: str, idx: str, width: int = None, height: int = None):
         self.name: str = name
-        self.id: str = id
+        self.idx: str = idx
         self.width: int = width
         self.height: int = height
         self.annotations: set[Annotation] = set()
@@ -116,19 +133,16 @@ class Annotation:
     Annotations associate labels with specific regions on a frame (image).
     '''
 
-    def __init__(self, frame: Frame, geom: BaseGeometry, label: str, id: str = None):
+    def __init__(self, frame: Frame, geom: BaseGeometry, label: str, annotation_id: str = None):
         '''
         Arguments:
             frame: path to the video or image
             id: index in lexical order of images
         '''
-        from datetime import datetime
-
         self.frame: Frame = frame
 
-        self.__id: str = id
+        self.__id: str = annotation_id
         if self.__id is None:
-            from uuid import uuid4
             self.__id = str(uuid4())
 
         self.frame.annotations.add(self)
@@ -168,6 +182,9 @@ class Annotation:
 
     @property
     def id(self):
+        '''
+        A unique identifier representing this annotation
+        '''
         return self.__id
 
 
@@ -179,10 +196,7 @@ class Dataset:
     are stored in the `annotations` attribute.
     '''
 
-    def __init__(self, annotations: List[Annotation] = []):
-        from datetime import datetime
-        from uuid import uuid4
-
+    def __init__(self, annotations: List[Annotation] = None):
         self.id: str = str(uuid4())
         self.name: str = None
         self.size: int = None
@@ -195,7 +209,10 @@ class Dataset:
         self.owner: User = None
         self.subset: str = None
 
-        self.annotations: List[Annotation] = annotations
+        if annotations is None:
+            self.annotations: List[Annotation] = []
+        else:
+            self.annotations: List[Annotation] = annotations
 
 
     def __repr__(self):
@@ -218,6 +235,8 @@ class Dataset:
         for annotation in self.annotations:
             if annotation.frame == key:
                 return True
+
+        return False
 
 
     @property
