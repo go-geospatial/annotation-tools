@@ -13,6 +13,11 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "pandas",
+    "python-dateutil",
+    "shapely"
+]
 
 [project.urls]
 Homepage = "https://github.com/go-geospatial/annotation-tools"
